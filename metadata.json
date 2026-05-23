@@ -1,0 +1,6 @@
+{
+  "name": "Arrow Out",
+  "description": "Unlock your IQ! A minimalist mobile puzzle game challenging you to slide and escape directional and Zig-Zag arrows off the grid sequentially. Perfect for brain-training and youth spatial reasoning.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
