@@ -210,9 +210,20 @@ const calculateLevelIQScores = (lvlId: number, moves: number, elapsedSec: number
   };
 };
 
+import { SplashScreen } from '@capacitor/splash-screen';
+
 export default function App() {
   // Onboarding screens
   const [showOnboarding, setShowOnboarding] = useState<boolean>(true);
+
+  useEffect(() => {
+    // Hide splash screen after React has mounted and the first frame is painted
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        SplashScreen.hide().catch(()=> { /* ignore */});
+      }, 100);
+    });
+  }, []);
 
 
   // Sound Config
