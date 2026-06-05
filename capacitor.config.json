@@ -1,0 +1,11 @@
+{
+  "appId": "com.arrowout.game",
+  "appName": "Arrow Out",
+  "bundledWebRuntime": false,
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}
