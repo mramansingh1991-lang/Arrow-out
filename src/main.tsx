@@ -9,6 +9,3 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
-
-// Hide the splash screen once React is mounted
-SplashScreen.hide().catch(console.error);
