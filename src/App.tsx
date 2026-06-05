@@ -41,16 +41,22 @@ import { GAME_LEVELS, THEMES } from './data/levelsData';
 import { Arrow, Direction, GameLevel } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 
+// Shared AudioContext to prevent hitting maximum concurrent contexts limit
+let globalAudioCtx: AudioContext | null = null;
+
 // Client-side synthesizer for gorgeous cute pop, swoosh, and victory sound effects (No external files needed)
 const playSynthSound = (type: 'chirp' | 'block' | 'success' | 'click' | 'unlock' | 'powerup', soundOn: boolean) => {
   if (!soundOn) return;
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
+    if (!globalAudioCtx) {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      globalAudioCtx = new AudioContextClass();
+    }
+    const ctx = globalAudioCtx;
     
     if (ctx.state === 'suspended') {
-      ctx.resume();
+      ctx.resume().catch(() => {});
     }
 
     if (type === 'chirp') {
@@ -497,7 +503,7 @@ export default function App() {
     return chain;
   };
 
-  const getThemeColors = (themeId: string, dir: Direction, isZigZag?: boolean) => {
+  const getThemeColors = (themeId: string, dir: Direction, isZigZag?: boolean, colorTheme?: string) => {
     const isCyber = themeId === 'cyber';
     const isCandy = themeId === 'candy';
     const isForest = themeId === 'forest';
@@ -506,29 +512,38 @@ export default function App() {
     let bodyBg = 'rgba(15, 23, 42, 0.45)'; // dark slate
     let glowColor = 'rgba(34, 211, 238, 0.3)';
 
-    if (dir === 'UP') {
+    // If a specific color theme is requested, override dir mapping
+    const themeKey = colorTheme ? colorTheme : dir;
+
+    if (themeKey === 'UP' || themeKey === 'cyan') {
       if (isCyber) { strokeColor = '#22d3ee'; bodyBg = 'rgba(15, 23, 42, 0.55)'; glowColor = 'rgba(34, 211, 238, 0.45)'; }
       else if (isCandy) { strokeColor = '#ec4899'; bodyBg = 'rgba(253, 244, 245, 0.85)'; glowColor = 'rgba(236, 72, 153, 0.25)'; }
       else if (isForest) { strokeColor = '#10b981'; bodyBg = 'rgba(6, 78, 59, 0.55)'; glowColor = 'rgba(16, 185, 129, 0.3)'; }
-      else { strokeColor = '#3b82f6'; bodyBg = 'rgba(30, 58, 138, 0.6)'; glowColor = 'rgba(59, 130, 246, 0.3)'; }
+      else { strokeColor = '#22d3ee'; bodyBg = 'rgba(30, 58, 138, 0.6)'; glowColor = 'rgba(34, 211, 238, 0.3)'; }
     }
-    else if (dir === 'DOWN') {
+    else if (themeKey === 'DOWN' || themeKey === 'fuchsia') {
       if (isCyber) { strokeColor = '#d946ef'; bodyBg = 'rgba(15, 23, 42, 0.55)'; glowColor = 'rgba(217, 70, 239, 0.45)'; }
       else if (isCandy) { strokeColor = '#8b5cf6'; bodyBg = 'rgba(243, 232, 255, 0.85)'; glowColor = 'rgba(139, 92, 246, 0.25)'; }
       else if (isForest) { strokeColor = '#14b8a6'; bodyBg = 'rgba(19, 78, 74, 0.55)'; glowColor = 'rgba(20, 184, 166, 0.3)'; }
-      else { strokeColor = '#8b5cf6'; bodyBg = 'rgba(88, 28, 135, 0.6)'; glowColor = 'rgba(139, 92, 246, 0.3)'; }
+      else { strokeColor = '#d946ef'; bodyBg = 'rgba(88, 28, 135, 0.6)'; glowColor = 'rgba(217, 70, 239, 0.3)'; }
     }
-    else if (dir === 'LEFT') {
+    else if (themeKey === 'LEFT' || themeKey === 'pink') {
       if (isCyber) { strokeColor = '#ec4899'; bodyBg = 'rgba(15, 23, 42, 0.55)'; glowColor = 'rgba(236, 72, 153, 0.45)'; }
       else if (isCandy) { strokeColor = '#f59e0b'; bodyBg = 'rgba(254, 243, 199, 0.85)'; glowColor = 'rgba(245, 158, 11, 0.25)'; }
       else if (isForest) { strokeColor = '#eab308'; bodyBg = 'rgba(113, 63, 18, 0.6)'; glowColor = 'rgba(234, 179, 8, 0.3)'; }
       else { strokeColor = '#f472b6'; bodyBg = 'rgba(131, 24, 67, 0.6)'; glowColor = 'rgba(244, 114, 182, 0.3)'; }
     }
-    else if (dir === 'RIGHT') {
+    else if (themeKey === 'RIGHT' || themeKey === 'emerald') {
       if (isCyber) { strokeColor = '#10b981'; bodyBg = 'rgba(15, 23, 42, 0.55)'; glowColor = 'rgba(16, 185, 129, 0.45)'; }
       else if (isCandy) { strokeColor = '#10b981'; bodyBg = 'rgba(209, 250, 229, 0.85)'; glowColor = 'rgba(16, 185, 129, 0.25)'; }
       else if (isForest) { strokeColor = '#84cc16'; bodyBg = 'rgba(63, 98, 18, 0.6)'; glowColor = 'rgba(132, 204, 22, 0.3)'; }
       else { strokeColor = '#a3e635'; bodyBg = 'rgba(54, 83, 20, 0.6)'; glowColor = 'rgba(163, 230, 53, 0.3)'; }
+    }
+    else if (themeKey === 'amber') {
+      strokeColor = '#f59e0b'; bodyBg = 'rgba(120, 53, 15, 0.6)'; glowColor = 'rgba(245, 158, 11, 0.3)';
+    }
+    else if (themeKey === 'indigo') {
+      strokeColor = '#6366f1'; bodyBg = 'rgba(49, 46, 129, 0.6)'; glowColor = 'rgba(99, 102, 241, 0.3)';
     }
 
     return { strokeColor, bodyBg, glowColor };
@@ -1347,7 +1362,7 @@ Respond in a warm, child-friendly, interactive, encouraging way (like a fun puzz
                         }
                       };
 
-                      const tColors = getThemeColors(activeTheme.id, arrow.dir, arrow.isZigZag);
+                      const tColors = getThemeColors(activeTheme.id, arrow.dir, arrow.isZigZag, arrow.colorTheme);
                       const isHovered = hoveredArrowId === arrow.id;
                       const pathD = generateSvgPath(cells, minRow, minCol, arrow);
 
@@ -1861,12 +1876,12 @@ Respond in a warm, child-friendly, interactive, encouraging way (like a fun puzz
             </div>
 
             <p className="text-[11px] text-slate-400 mb-4 font-sans">
-              Solve each puzzle sequentially to unlock the next harder setup. Complete all 50 levels to demonstrate Ultimate Spatial IQ Logic Grandmaster status!
+              Solve each puzzle sequentially to unlock the next harder setup. Complete all 125 levels to demonstrate Ultimate Spatial IQ Logic Grandmaster status!
             </p>
 
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 text-xs">
               {GAME_LEVELS.map((level, index) => {
-                const isUnlocked = index <= maxUnlockedIdx;
+                const isUnlocked = true; // index <= maxUnlockedIdx;
                 const isActive = index === currentLevelIdx;
 
                 return (
@@ -1876,6 +1891,7 @@ Respond in a warm, child-friendly, interactive, encouraging way (like a fun puzz
                     onClick={() => {
                       playSynthSound('click', soundOn);
                       setCurrentLevelIdx(index);
+                      setActiveTab('game');
                     }}
                     className={`p-3 rounded-2xl text-left border relative transition-all group ${
                       isActive
