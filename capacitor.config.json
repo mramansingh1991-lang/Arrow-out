@@ -3,13 +3,16 @@
   "appName": "Arrow Out",
   "bundledWebRuntime": false,
   "webDir": "dist",
+  "backgroundColor": "#0f172a",
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 3000,
-      "launchAutoHide": false,
+      "launchAutoHide": true,
+      "launchShowDuration": 0,
+      "launchFadeOutDuration": 0,
       "backgroundColor": "#0f172a",
-      "showSpinner": true,
-      "androidSpinnerStyle": "large"
+      "showSpinner": false,
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP"
     }
   }
 }
