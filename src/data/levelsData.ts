@@ -186,8 +186,8 @@ const initialLevels: GameLevel[] = [
     difficulty: "Hard",
     gridSize: 6,
     arrows: [
-      { id: '10-1', row: 1, col: 1, dir: 'RIGHT', status: 'active', shape: 'double', cells: [{ row: 1, col: 1 }, { row: 1, col: 2 }] },
-      { id: '10-2', row: 1, col: 3, dir: 'DOWN', status: 'active', shape: 'double', cells: [{ row: 1, col: 3 }, { row: 2, col: 3 }] },
+      { id: '10-1', row: 1, col: 1, dir: 'UP', status: 'active', shape: 'double', cells: [{ row: 1, col: 1 }, { row: 1, col: 2 }] },
+      { id: '10-2', row: 1, col: 3, dir: 'UP', status: 'active', shape: 'double', cells: [{ row: 1, col: 3 }, { row: 2, col: 3 }] },
       { id: '10-3', row: 3, col: 2, dir: 'LEFT', status: 'active', shape: 'double', cells: [{ row: 3, col: 2 }, { row: 3, col: 3 }] },
       { id: '10-4', row: 2, col: 1, dir: 'UP', status: 'active', shape: 'double', cells: [{ row: 2, col: 1 }, { row: 3, col: 1 }] },
       { id: '10-5', row: 4, col: 1, dir: 'RIGHT', status: 'active', shape: 'double', cells: [{ row: 4, col: 1 }, { row: 4, col: 2 }] },
@@ -300,33 +300,62 @@ function isLevelSolvable(gridSize: number, initialArrows: any[]): boolean {
 const generatedLevels: GameLevel[] = [];
 const directions: ('UP' | 'DOWN' | 'LEFT' | 'RIGHT')[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
 
-for (let id = 11; id <= 50; id++) {
+for (let id = 11; id <= 125; id++) {
   // Systematic level sizing and arrow counts for strictly increasing toughness
   let gridSize = 6;
-  let arrowCount = 8;
-  let difficulty: 'Medium' | 'Hard' | 'Expert' = 'Medium';
+  let difficulty: 'Medium' | 'Hard' | 'Expert' = 'Expert';
+  let targetCoverage = 0.35; // The percentage of the grid we want filled
 
-  if (id <= 11) {
-    gridSize = 6;
-    arrowCount = 8;
-    difficulty = 'Hard';
-  } else if (id <= 17) {
-    gridSize = 6;
-    arrowCount = 9 + (id - 12); // 9 to 14
+  if (id <= 15) {
+    gridSize = 7;
+    targetCoverage = 0.40 + ((id - 10) * 0.02); 
     difficulty = 'Hard';
   } else if (id <= 25) {
-    gridSize = 7;
-    arrowCount = 13 + Math.floor((id - 18) * 0.75); // 13 to 18
-    difficulty = 'Expert';
-  } else if (id <= 35) {
     gridSize = 8;
-    arrowCount = 19 + Math.floor((id - 26) * 0.7); // 19 to 25
-    difficulty = 'Expert';
+    targetCoverage = 0.45 + ((id - 15) * 0.015);
+  } else if (id <= 35) {
+    gridSize = 10;
+    targetCoverage = 0.50 + ((id - 25) * 0.01);
+  } else if (id <= 50) {
+    gridSize = 12;
+    targetCoverage = 0.55 + ((id - 35) * 0.005);
+  } else if (id <= 75) {
+    // 51 to 75: Extreme tough levels
+    gridSize = 14;
+    if (id >= 65) gridSize = 16;
+    targetCoverage = 0.60 + ((id - 50) * 0.003); 
+  } else if (id <= 100) {
+    // 76 to 100: VERY VERY HARD: dense but huge grid, massive intricate zigzags
+    gridSize = 18;
+    if (id >= 90) gridSize = 20;
+    targetCoverage = 0.65;
   } else {
-    gridSize = 9;
-    arrowCount = 26 + Math.floor((id - 36) * 1.05); // 26 to 40
-    difficulty = 'Expert';
+    // 101 to 125: ABSOLUTE NIGHTMARE: massive grids, super dense, extreme arrow lengths
+    gridSize = 22;
+    if (id >= 115) gridSize = 24;
+    targetCoverage = 0.70;
   }
+
+  // Calculate approximate arrow lengths based on ID to find total arrows needed
+  // length logic closely mirrors the generation phase
+  let avgLength = 1.5;
+  if (id > 100) {
+    avgLength = 7.0;
+  } else if (id > 75) {
+    avgLength = 5.5; 
+  } else if (id > 50) {
+    avgLength = 5.0;
+  } else if (id > 35) {
+    avgLength = 3.5;
+  } else {
+    avgLength = 2.0;
+  }
+
+  const cellsNeeded = Math.floor(gridSize * gridSize * targetCoverage);
+  let arrowCount = Math.floor(cellsNeeded / avgLength);
+  
+  // ensure minimums
+  if (arrowCount < 8) arrowCount = 8;
 
   const placedArrows: any[] = [];
   const occupiedCells = new Set<string>();
@@ -337,42 +366,68 @@ for (let id = 11; id <= 50; id++) {
     return layoutSeed / 233280;
   };
 
+  // Determine a dominant direction for this level to make them trickier (all sliding the same way)
+  let levelDominantDir: ('UP' | 'DOWN' | 'LEFT' | 'RIGHT') | null = null;
+  if (id >= 20) {
+     const prob = Math.min(0.95, 0.4 + ((id - 20) * 0.015)); // Increases from 40% to 95%
+     if (lcgRandom() < prob) {
+        levelDominantDir = directions[Math.floor(lcgRandom() * 4)];
+     }
+  }
+
   let attempts = 0;
-  const maxAttempts = 500;
+  const maxAttempts = 500000;
 
   while (placedArrows.length < arrowCount && attempts < maxAttempts) {
     attempts++;
 
-    const r = Math.floor(lcgRandom() * gridSize);
-    const c = Math.floor(lcgRandom() * gridSize);
-    const dir = directions[Math.floor(lcgRandom() * 4)];
+    const startR = Math.floor(lcgRandom() * gridSize);
+    const startC = Math.floor(lcgRandom() * gridSize);
     
-    // Straight single, straight inline double, or L-shape (Zig-Zag)
-    const shapeSelect = lcgRandom();
-    const shape: 'single' | 'double' | 'L-shape' = shapeSelect < 0.2 ? 'single' : (shapeSelect < 0.5 ? 'double' : 'L-shape');
-    
-    let cells: { row: number; col: number }[] = [];
-    if (shape === 'single') {
-      cells = [{ row: r, col: c }];
-    } else if (shape === 'double') {
-      const isVert = dir === 'UP' || dir === 'DOWN';
-      if (isVert) {
-        const nextR = r + 1 < gridSize ? r + 1 : r - 1;
-        cells = [{ row: r, col: c }, { row: nextR, col: c }].sort((a, b) => a.row - b.row);
-      } else {
-        const nextC = c + 1 < gridSize ? c + 1 : c - 1;
-        cells = [{ row: r, col: c }, { row: r, col: nextC }].sort((a, b) => a.col - b.col);
-      }
-    } else {
-      // L-shape (Zig-Zag)
-      const nextR = r + 1 < gridSize ? r + 1 : r - 1;
-      const nextC = c + 1 < gridSize ? c + 1 : c - 1;
-      cells = [
-        { row: r, col: c },
-        { row: nextR, col: c },
-        { row: nextR, col: nextC }
-      ];
+    let dir = directions[Math.floor(lcgRandom() * 4)];
+    // Apply dominant direction bias (90% chance if set)
+    if (levelDominantDir && lcgRandom() < 0.90) {
+       dir = levelDominantDir;
     }
+    
+    let length = 1;
+    let shapeName = 'single';
+    if (id > 100) {
+      length = 4 + Math.floor(lcgRandom() * 7); // 4 to 10 (extreme zigzags)
+    } else if (id > 75) {
+      length = 3 + Math.floor(lcgRandom() * 6); // 3 to 8 (massive zigzags)
+    } else if (id > 50) {
+      length = 3 + Math.floor(lcgRandom() * 5); // 3 to 7
+    } else if (id > 35) {
+      length = 2 + Math.floor(lcgRandom() * 4); // 2 to 5
+    } else {
+      length = 1 + Math.floor(lcgRandom() * 3); // 1 to 3
+    }
+    
+    let cells: { row: number; col: number }[] = [{ row: startR, col: startC }];
+    let currR = startR;
+    let currC = startC;
+    
+    // Random walk for dynamic polyomino shapes
+    for (let i = 1; i < length; i++) {
+      const move = directions[Math.floor(lcgRandom() * 4)];
+      let nextR = currR; let nextC = currC;
+      if (move === 'UP') nextR--;
+      else if (move === 'DOWN') nextR++;
+      else if (move === 'LEFT') nextC--;
+      else if (move === 'RIGHT') nextC++;
+      
+      if (!cells.some(c => c.row === nextR && c.col === nextC)) {
+         cells.push({ row: nextR, col: nextC });
+         currR = nextR;
+         currC = nextC;
+      }
+    }
+    
+    if (cells.length === 1) shapeName = 'single';
+    else if (cells.length === 2) shapeName = 'double';
+    else if (cells.length === 3) shapeName = 'L-shape';
+    else shapeName = 'polyomino';
     
     const boundsOk = cells.every(cell => cell.row >= 0 && cell.row < gridSize && cell.col >= 0 && cell.col < gridSize);
     if (!boundsOk) continue;
@@ -380,9 +435,6 @@ for (let id = 11; id <= 50; id++) {
     const hasCollision = cells.some(cell => occupiedCells.has(`${cell.row},${cell.col}`));
     if (hasCollision) continue;
 
-    // Constructive solvability path check is complex for L-shapes. 
-    // Simplified: check if bounding box of arrow is mostly clear or if another arrow exists
-    
     // Constructive solvability path check: exit path must have no collisions with ALREADY placed arrows
     let pathOk = true;
     for (const cell of cells) {
@@ -408,6 +460,12 @@ for (let id = 11; id <= 50; id++) {
 
     if (!pathOk) continue;
 
+    const allColors = ['cyan', 'fuchsia', 'pink', 'emerald', 'amber', 'indigo'];
+    let selectedColor = undefined;
+    if (id > 50 || cells.length >= 3) {
+      selectedColor = allColors[Math.floor(lcgRandom() * allColors.length)];
+    }
+
     // Safe to place!
     cells.forEach(cell => occupiedCells.add(`${cell.row},${cell.col}`));
     placedArrows.push({
@@ -416,9 +474,10 @@ for (let id = 11; id <= 50; id++) {
       col: cells[0].col,
       dir,
       status: 'active' as const,
-      shape,
+      shape: shapeName,
       cells,
-      isZigZag: shape === 'L-shape' && (difficulty === 'Hard' || difficulty === 'Expert')
+      colorTheme: selectedColor,
+      isZigZag: cells.length >= 3
     });
   }
 
